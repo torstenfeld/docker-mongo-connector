@@ -12,14 +12,16 @@ function _mongo() {
 EOF
 }
 
-is_master_result="false"
+#is_master_result="false"
+is_master_result=$(_mongo "rs.isMaster().ismaster")
 expected_result="true"
 
 while true;
 do
-  if [ "${is_master_result}" == "${expected_result}" ] ; then
-    echo "Initiate Mongod node to get primary node..."
-    $(_mongo "rs.initiate()")
+  echo "is_master_result: ${is_master_result}"
+  if [ "${is_master_result}" != "${expected_result}" ] ; then
+    echo "Initiate Mongod node to become primary node..."
+    _mongo "rs.initiate()"
     is_master_result=$(_mongo "rs.isMaster().ismaster")
     echo "Waiting for Mongod node to assume primary status..."
     sleep 3
@@ -31,4 +33,5 @@ done
 
 sleep 1
 
+echo "Starting mongo-connector"
 mongo-connector --auto-commit-interval=0 --oplog-ts=/data/oplog.ts -m ${mongo}:${mongoport} -t ${elasticsearch}:${elasticport} -d elastic2_doc_manager
